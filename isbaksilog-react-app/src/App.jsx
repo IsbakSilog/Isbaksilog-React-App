@@ -8,6 +8,9 @@ function App() {
   const [weather, setWeather] = useState({}); // add a new state for weather data
   const [city, setCity] = useState(''); // add a new state for city input
   const [error, setError] = useState(null); // add a new state for error handling
+  const [lat, setLat] = useState(''); // add a new state for latitude
+  const [lon, setLon] = useState(''); // add a new state for longitude
+  const [pngUrl, setPngUrl] = useState(''); // add a new state for PNG URL
 
   useEffect(() => {
     // do nothing on mount, wait for user input
@@ -15,35 +18,39 @@ function App() {
 
   const fetchWeatherData = async () => {
     try {
-      const apiKey = 'ec1ba8ea32ede4fb198d891ebd3c201a'; // replace with your API key
-      const cityId = getCityId(city); // get the city ID from the city name
-      const url = `http://api.openweathermap.org/data/2.5/forecast?id=${cityId}&appid=${apiKey}`;
+      const url = `http://www.7timer.info/bin/api.pl?lon=${lon}&lat=${lat}&product=astro&output=json`;
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-      setWeather(data);
-      setError(null);
+      const data = await response.text(); // get the response text instead of JSON
+      try {
+        const jsonData = JSON.parse(data); // try to parse the response text as JSON
+        setWeather(jsonData);
+        setError(null);
+        setPngUrl(`http://www.7timer.info/bin/api.pl?lon=${lon}&lat=${lat}&product=astro&output=png`);
+      } catch (error) {
+        setError(`Invalid JSON response: ${error.message}`);
+        setWeather({});
+        setPngUrl('');
+      }
     } catch (error) {
       setError(error.message);
       setWeather({});
+      setPngUrl('');
     }
-  };
-
-  const getCityId = (cityName) => {
-    // you need to implement a function to get the city ID from the city name
-    // for example, you can use a city ID mapping object
-    const cityIdMapping = {
-      'New York': 5128581,
-      'London': 2643743,
-      // add more city IDs here
-    };
-    return cityIdMapping[cityName];
   };
 
   const handleCityChange = (e) => {
     setCity(e.target.value);
+  };
+
+  const handleLatChange = (e) => {
+    setLat(e.target.value);
+  };
+
+  const handleLonChange = (e) => {
+    setLon(e.target.value);
   };
 
   const handleSearch = () => {
@@ -68,16 +75,29 @@ function App() {
           onChange={handleCityChange}
           placeholder="Enter city"
         />
+        <input
+          type="number"
+          value={lat}
+          onChange={handleLatChange}
+          placeholder="Enter latitude"
+        />
+        <input
+          type="number"
+          value={lon}
+          onChange={handleLonChange}
+          placeholder="Enter longitude"
+        />
         <button onClick={handleSearch}>Search</button>
         {error ? (
           <p style={{ color: 'red' }}>{error}</p>
         ) : (
-          weather.list && (
+          weather.dataseries && (
             <div>
-              <h2>{weather.city.name}</h2>
-              <p>Temperature: {weather.list[0].main.temp}°F</p>
-              <p>Humidity: {weather.list[0].main.humidity}%</p>
-              <p>Weather: {weather.list[0].weather[0].description}</p>
+              <h2>{city}</h2>
+              <img src={pngUrl} alt="Weather forecast" />
+              <p>Temperature: {weather.dataseries[0].temp2m}°C</p>
+              <p>Humidity: {weather.dataseries[0].rh2m}%</p>
+              <p>Weather: {weather.dataseries[0].weather}</p>
             </div>
           )
         )}
